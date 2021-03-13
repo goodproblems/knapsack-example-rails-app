@@ -1,0 +1,149 @@
+name: ci
+on: [push]
+jobs:
+  # OPTIONAL: Cancel any previous CI runs to save your GH Actions minutes
+  cancel:
+    name: 'Cancel Previous Runs'
+    runs-on: ubuntu-20.04
+    timeout-minutes: 3
+    steps:
+      - uses: styfle/cancel-workflow-action@0.8.0
+        with:
+          workflow_id: 3553203
+  yarn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '12'
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Yarn install
+        run: yarn install --frozen-lockfile
+        env:
+          CYPRESS_INSTALL_BINARY: 0 # Prevent installing Cypress binary until later when it's needed
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+  assets:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs: [yarn, bundle]
+    env:
+      RAILS_ENV: ci
+      RACK_ENV: ci
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        id: assets-cache
+        with:
+          path: |
+            public/packs
+            tmp/cache/webpacker
+          key: assets-cache-v3-${{ runner.os }}-${{ hashFiles('app/javascript/**/*', 'yarn.lock', 'cypress/**/*') }}
+          restore-keys: |
+            assets-cache-v3-${{ runner.os }}-
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '14'
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+      - uses: ruby/setup-ruby@v1
+        if: steps.assets-cache.outputs.cache-hit != 'true'
+        with:
+          bundler-cache: true
+      - name: Remove Old Assets
+        if: steps.assets-cache.outputs.cache-hit != 'true'
+        run: bin/rails webpacker:clean # Clean old assets to 
+      - name: Compile Assets
+        if: steps.assets-cache.outputs.cache-hit != 'true'
+        run: bin/rails webpacker:compile
+  rspec:
+    timeout-minutes: 3 # Adjust as needed, just here to prevent accidentally using up all your minutes from a silly infinite loop of some kind
+    env:
+      RAILS_ENV: test
+    runs-on: ubuntu-latest
+    needs: [bundle]
+        # options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Build DB
+        run: bin/rails db:schema:load
+      - name: Run Rspec Tests
+        run: bin/rspec spec
+  cypress:
+    timeout-minutes: 20  # Adjust as needed, just here to prevent accidentally using up all your minutes from a silly infinite loop of some kind
+    env:
+      RAILS_ENV: ci
+      RACK_ENV: ci
+      GITHUB_TOKEN: ${{ github.token }}
+      WEBPACKER_COMPILE: false
+      CI: 1
+      CYPRESS_CI: true
+      TERM: xterm
+      TS_NODE_PROJECT: 0
+    runs-on: ubuntu-latest
+    needs: [bundle, yarn, assets]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '12'
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+      - uses: actions/cache@v2
+        with:
+          path: |
+            public/packs
+            tmp/cache/webpacker
+          key: assets-cache-v3-${{ runner.os }}-${{ hashFiles('app/javascript/**/*', 'yarn.lock', 'cypress/**/*') }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Build DB
+        run: bin/rails db:schema:load
+      - name: Run Rails Server in background
+        run: bin/rails server -p 3000 &
+      - run: npx cypress -v > .cypress-version
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-cache-v3-${{ runner.os }}-${{ hashFiles('.cypress-version') }}
+      - run: yarn cypress install
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '12'
+      - run: yarn wait-on 'http-get://localhost:3000/graphql' -t 30000
+      - name: Run tests
+        run: yarn cypress:run
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: cypress-videos
+          path: cypress/videos
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: cypress-logs
+          path: cypress/logs
