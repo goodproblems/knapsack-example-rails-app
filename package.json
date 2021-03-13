@@ -2,7 +2,8 @@
   "name": "knapsack-example-rails-app",
   "private": true,
   "dependencies": {
-    "cypress": "^6.6.0"
+    "cypress": "^6.6.0",
+    "wait-on": "^5.2.1"
   },
   "devDependencies": {
     "webpack-dev-server": "^3.11.2"
