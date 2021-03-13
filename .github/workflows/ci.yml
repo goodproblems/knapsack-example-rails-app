@@ -87,7 +87,7 @@ jobs:
           node-version: '12'
       - run: yarn wait-on 'http-get://localhost:3000' -t 30000
       - name: Run tests
-        run: yarn cypress:run
+        run: yarn cypress run
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
