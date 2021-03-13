@@ -56,7 +56,6 @@ jobs:
       RAILS_ENV: ci
       RACK_ENV: ci
       GITHUB_TOKEN: ${{ github.token }}
-      WEBPACKER_COMPILE: false
       CI: 1
       CYPRESS_CI: true
       TERM: xterm
@@ -72,12 +71,6 @@ jobs:
         with:
           path: '**/node_modules'
           key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
-      - uses: actions/cache@v2
-        with:
-          path: |
-            public/packs
-            tmp/cache/webpacker
-          key: assets-cache-v3-${{ runner.os }}-${{ hashFiles('yarn.lock', 'cypress/**/*') }}
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
