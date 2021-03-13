@@ -129,7 +129,6 @@ jobs:
       - uses: actions/setup-node@v2-beta
         with:
           node-version: '12'
-      - run: yarn wait-on 'http-get://localhost:3000/graphql' -t 30000
       - name: Run tests
         run: yarn cypress:run
       - uses: actions/upload-artifact@v2
