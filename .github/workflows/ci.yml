@@ -53,8 +53,8 @@ jobs:
   cypress:
     timeout-minutes: 20  # Adjust as needed, just here to prevent accidentally using up all your minutes from a silly infinite loop of some kind
     env:
-      RAILS_ENV: ci
-      RACK_ENV: ci
+      RAILS_ENV: test
+      RACK_ENV: test
       GITHUB_TOKEN: ${{ github.token }}
       CYPRESS_CI: true
       TS_NODE_PROJECT: 0
