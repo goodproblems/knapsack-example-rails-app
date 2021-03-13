@@ -1,5 +1,5 @@
 {
-  "name": "knapsack-test-app",
+  "name": "knapsack-example-rails-app",
   "private": true,
   "dependencies": {
     "@babel/preset-react": "^7.12.13",
