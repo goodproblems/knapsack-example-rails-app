@@ -76,10 +76,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ci_node_total: [5]
+        ci_node_total: [3]
         # set N-1 indexes for parallel jobs
         # When you run 5 parallel jobs then first job will have index 0, the second job will have index 1 etc
-        ci_node_index: [0, 1, 2, 3, 4]
+        ci_node_index: [0, 1, 2]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
